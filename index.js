@@ -18,8 +18,13 @@ app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :data")
 );
 
-app.get("/info", (request, response) => {
-  response.send(`<p>${info}</p><p>${date}</p>`);
+app.get("/info", async (request, response) => {
+  const query = Person.find();
+  let queryLength = await query.countDocuments();
+  let date = new Date();
+  response.send(
+    `<h1>Phonebook:</h1><p>Contains ${queryLength} phone number(s)</p><p>${date}</p>`
+  );
 });
 
 app.get("/api/persons", (request, response, next) => {
@@ -50,6 +55,20 @@ app.delete("/api/persons/:id", (request, response, next) => {
     .catch((error) => next(error));
 });
 
+app.put("/api/persons/:id", (request, response) => {
+  const body = request.body;
+  const person = {
+    name: body.name,
+    phone: body.phone,
+  };
+
+  Person.findByIdAndUpdate(request.params.id, person, { new: body.phone }).then(
+    (updatedPerson) => {
+      response.json(updatedPerson);
+    }
+  );
+});
+
 app.post("/api/persons", async (request, response) => {
   const body = request.body;
 
@@ -64,12 +83,6 @@ app.post("/api/persons", async (request, response) => {
     return response.status(400).json({ error: "name missing" });
   } else if (!body.phone) {
     return response.status(400).json({ error: "phone missing" });
-  } else if (nameExists) {
-    Person.findByIdAndUpdate(nameExists._id, {
-      phone: body.phone,
-    }).then((updatedPerson) => {
-      response.json(updatedPerson);
-    });
   } else {
     person.save().then((savedPerson) => {
       response.json(savedPerson);
